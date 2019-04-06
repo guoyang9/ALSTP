@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import os, sys
 
 import numpy as np 
@@ -15,17 +11,19 @@ def mrr(gt_item, pred_items):
 	else:
 		return 0
 
+
 def hit(gt_item, pred_items):
 	if gt_item in pred_items:
 		return 1
 	return 0
 
+
 def ndcg(gt_item, pred_items):
 	if gt_item in pred_items:
 		index =np.where(pred_items == (gt_item))[0][0]
-
 		return np.reciprocal(np.log2(index+2))
 	return 0
+
 
 def valid(model, sess, valid_data, fix_dim, user_list, 
 			global_int_eval, item_vec_eval,	query_vec_eval, 
@@ -42,7 +40,7 @@ def valid(model, sess, valid_data, fix_dim, user_list,
 	"""
 	HR, MRR, NDCG = [], [], []
 
-	#Inverse list and pop them one by one
+	# inverse list and pop them one by one
 	global_int_eval = global_int_eval[::-1]
 	item_vec_eval = item_vec_eval[::-1]
 	query_vec_eval = query_vec_eval[::-1]

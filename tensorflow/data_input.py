@@ -2,49 +2,50 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import os, json
+import os
+import json
 import collections
 
 import numpy as np
 import pandas as pd
 from gensim.models.doc2vec import Doc2Vec
 
-ROOT_DIR = '/home/yang/project/ALSTP/processed/'
 
 class ALSTPData(object):
-	def __init__(self, dataset, file_name, num_steps, is_training):
+	def __init__(self, num_steps, is_training):
 		""" For every epoch, the correct sequence for the dataset
 		    should be shuffle, sample, next user, next item.
 		"""
-		self.doc2vec_model = Doc2Vec.load(os.path.join(
-							ROOT_DIR, dataset, 'doc2vecFile'))
-		query_dict = json.load(open(os.path.join(
-						ROOT_DIR, dataset, 'queryFile.json'), 'r'))
-
-		file_path = os.path.join(ROOT_DIR, dataset, file_name)
 		self.num_steps = num_steps
 		self.is_training = is_training
-		self.data = pd.read_csv(file_path, 
+
+		self.doc2vec = Doc2Vec.load(config.doc2model_path)
+		query_dict = json.load(open(config.query_path, 'r'))
+
+		split = config.train_path if self.is_training else config.test_path
+		self.data = pd.read_csv(split, 
 						usecols=['query_', 'reviewerID', 'asin'])
 		self.user_list = self.data.reviewerID.unique()
 		self.item_list = self.data.asin.unique()
 
-		#Match asin and query vectors
+		# match asin and query vectors
 		item_vec = []
 		query_vec = []
 		for i in range(len(self.data)):
 			item_vec.append(
-					self.doc2vec_model.docvecs[self.data.asin[i]])
-			query_vec.append(self.doc2vec_model.docvecs[
-									query_dict[self.data.query_[i]]])
+					self.doc2vec.docvecs[self.data.asin[i]])
+			query_vec.append(self.doc2vec.docvecs[
+					query_dict[self.data.query_[i]]])
 
 		self.data['item_vec'] = item_vec
 		self.data['query_vec'] = query_vec
 
-	def get_user_number(self):
+	@property
+	def _get_u_num(self):
 		return len(self.user_list)
 
-	def get_item_number(self):
+	@property
+	def _get_i_num(self):
 		return len(self.data.asin.unique())
 
 	def shuffle_user(self):
@@ -83,18 +84,27 @@ class ALSTPData(object):
 		if self.is_training:
 			#Save the last asinVecUser and query_vec_user
 			if asin == self.length_user:
-				return (self.item_vec_user[asin: asin + self.num_steps],
-					    self.item_user[asin: asin + self.num_steps],
-					    self.query_vec_user[asin: asin + self.num_steps])
+				return (np.array(self.item_vec_user
+							[asin: asin + self.num_steps]),
+					    np.array(self.item_user
+					    		[asin: asin + self.num_steps]),
+					    np.array(self.query_vec_user
+					    		[asin: asin + self.num_steps]))
 			else:
-				return  (self.item_vec_user[asin: asin + self.num_steps],
-						 self.item_vec_user[asin + self.num_steps],
-						 self.neg_vecs_user[asin + self.num_steps],
-						 self.item_user[asin + self.num_steps],
-					     self.query_vec_user[asin: asin + self.num_steps],
-					     self.query_vec_user[asin + self.num_steps])
+				return  (np.array(self.item_vec_user
+								[asin: asin + self.num_steps]),
+						 np.array(self.item_vec_user
+						 		[asin + self.num_steps]),
+						 np.array(self.neg_vecs_user
+						 		[asin + self.num_steps]),
+						 np.array(self.item_user
+						 		[asin + self.num_steps]),
+					     	 np.array(self.query_vec_user
+					     			[asin: asin + self.num_steps]),
+					         np.array(self.query_vec_user
+					     			[asin + self.num_steps]))
 
 		else:
-			return (self.item_user[0], 
-					self.query_vec_user, 
-					self.text_query_user[0])
+			return (np.array(self.item_user[0]), 
+					np.array(self.query_vec_user), 
+					np.array(self.text_query_user[0]))

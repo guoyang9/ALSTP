@@ -329,4 +329,3 @@ class ALSTP(object):
 			outputs = sess.run(output_feed, input_feed)
 
 		return outputs
-

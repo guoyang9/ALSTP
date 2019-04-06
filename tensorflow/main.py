@@ -2,15 +2,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import sys, os, time
+import os
+import sys
+import time
+sys.path.append(os.getcwd())
 
 import numpy as np
 import tensorflow as tf
+
 from model import ALSTP
-import evaluate, data_import
+import evaluate, data_input
+
 
 FLAGS = tf.app.flags.FLAGS
-
 tf.app.flags.DEFINE_integer('negative_num', 5, 'number of negative samples.')
 tf.app.flags.DEFINE_integer('global_dim', 128, 'the size for preference.')
 tf.app.flags.DEFINE_integer('epochs', 20, 'the number of epochs.')
@@ -54,19 +58,18 @@ def train(train_data, valid_data, num_items, all_items, all_items_id):
 			sess.run(tf.global_variables_initializer())
 		
 		############################### Training ####################################
-
 		count = 0
 		for epoch in range(FLAGS.epochs):
 			model.is_training = True
 			train_data.neg_sample(FLAGS.negative_num)
 			start_time = time.time()
 			(global_int_eval, item_pre_eval, query_vec_eval,
-					item_id_eval) = ([] for _ in range(4)) # For evaluation
+					item_id_eval) = ([] for _ in range(4)) # for evaluation
 
-			user_list = train_data.shuffle_user() # First shuffle all users
+			user_list = train_data.shuffle_user() # first shuffle all users
 
 			for step, user in enumerate(user_list):
-				sess.run(model.init_global_interest) # For a new user
+				sess.run(model.init_global_interest) # for a new user
 				item_len = train_data.next_user(user)
 				for itemidx in range(item_len):
 					(item_pre, item_target, neg_vecs, target_id, query_pre,
@@ -78,13 +81,13 @@ def train(train_data, valid_data, num_items, all_items, all_items_id):
 					if itemidx == 1:
 						model.cons_global_interest(sess, state)
 
-					# Slowly update global interest
+					# slowly update global interest
 					if not itemidx == 0 and itemidx % FLAGS.num_steps == 0:
 						model.update_global_interest(sess, state)
 
 					outputs = model.step(sess, item_pre, item_target, query_pre,
 											query_target, neg_vecs, None, count)
-					state = outputs[0] # For updating global_interest
+					state = outputs[0] # for updating global_interest
 					count += 1
 
 		############################# SAVE FOR EVALUATION ##########################
@@ -110,14 +113,11 @@ def train(train_data, valid_data, num_items, all_items, all_items_id):
 
 
 def main(argv=None):
-	train_data = data_import.ALSTPData(FLAGS.dataset,
-                        'train.csv', FLAGS.num_steps, is_training=True)
-	valid_data = data_import.ALSTPData(FLAGS.dataset,
-						'test.csv',  None, is_training=False)
+	train_data = data_input.ALSTPData(FLAGS.num_steps, is_training=True)
+	valid_data = data_input.ALSTPData(None, is_training=False)
 
-	#For testing
-	full_data = data_import.ALSTPData(
-						FLAGS.dataset, 'full.csv', None, False)
+	# for testing
+	full_data = data_input.ALSTPData(None, is_training=False)
 	all_items_list, all_items_vec = [], []
 	for i in range(len(full_data.data)):
 		item = full_data.data['asin'][i]
